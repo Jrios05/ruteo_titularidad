@@ -92,7 +92,7 @@ with col2:
         has_default_tit = st.checkbox("¿Configurar Titularidad para todos los bancos?", value=True)
         default_tit_provider = None
         if has_default_tit:
-            opciones_tit_default = ["GMONEY"]
+            opciones_tit_default = ["GMONEY","ALFIN"]
             default_tit_provider = st.selectbox("Proveedor de Titularidad por defecto:", opciones_tit_default)
 
         st.divider()
@@ -139,7 +139,6 @@ def preparar_datos_tabla():
         nombre = bancos_principales.get(psp, psp)
         ruteo = st.session_state.custom_routing.get(psp, default_channel if has_default_routing else "No configurado")
 
-        # AJUSTE: Solo muestra titularidad (incluyendo a YAPE) si el checkbox principal está activo
         if activar_titularidad:
             if psp == "psp_w156838159753" and ruteo == "YAPE":
                 tit = "YAPE"
@@ -152,8 +151,14 @@ def preparar_datos_tabla():
 
         filas.append({"Banco / Criterio": nombre, "Canal de Ruteo": ruteo, "Validador Titularidad": tit})
 
+    # CORRECCIÓN AQUÍ: Interplaza ahora valida si debe mostrar el proveedor por defecto
     if validate_interbranch:
-        filas.append({"Banco / Criterio": "Interplaza", "Canal de Ruteo": "BATCH", "Validador Titularidad": "N/A"})
+        validador_interplaza = default_tit_provider if (activar_titularidad and has_default_tit) else "N/A"
+        filas.append({
+            "Banco / Criterio": "Interplaza",
+            "Canal de Ruteo": "BATCH",
+            "Validador Titularidad": validador_interplaza
+        })
 
     return pd.DataFrame(filas)
 
