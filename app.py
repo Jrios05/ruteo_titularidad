@@ -36,7 +36,7 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.header("1. Configuración de Ruteo")
-    has_default_routing = st.checkbox("¿Activar Bank Transfer y Billeteras para todos los bancos?", value=True)
+    has_default_routing = st.checkbox("¿Activar Bank Transfer para todos los bancos?", value=True)
     default_channel = None
     if has_default_routing:
         opciones_ruteo_default = ["GMONEY", "BATCH", "ALFIN"]
