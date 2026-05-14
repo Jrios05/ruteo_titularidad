@@ -19,13 +19,13 @@ bancos_principales = {
 }
 
 billeteras_principales = {
-    "psp_w156838159753": "Yape",  # Yape ahora vive aquí
     "psp_3e74133b10bb44e6bd81": "PLIN",
     "psp_c6bee88b7b7e49bab8d4": "BIM",
     "psp_258a4fc095414c3b9c44": "LIGO",
     "psp_3f7ac8c5a4c8433288bd": "DALE",
     "psp_12f35441df4e426991e9": "PREXPE",
-    "psp_28ed3cdabcbe49b098ee": "OH!"
+    "psp_28ed3cdabcbe49b098ee": "OH!",
+    "psp_w156838159753": "Yape"  # Yape ahora vive aquí
 }
 
 todos_los_psps_dict = {**bancos_principales, **billeteras_principales}
@@ -45,7 +45,7 @@ def init_session_state():
 
 init_session_state()
 
-st.title("⚙️ Generador de JSON: Ruteo y Titularidad")
+st.title("⚙️ Ruteo y Titularidad")
 
 col1, col2 = st.columns(2)
 
@@ -56,16 +56,16 @@ with col1:
     st.header("1. Configuración de Ruteo")
 
     # --- 1.1 SECCIÓN BANK TRANSFER ---
-    with st.expander("1.1 Configuración Bank Transfer", expanded=True):
-        st.subheader("Configuración Global Bancos")
-        has_default_routing_bancos = st.checkbox("Activar Bank Transfer por defecto", value=True, key="chk_def_bank")
+    with st.expander("1.1 Bank Transfer", expanded=True):
+        st.subheader("Ruteo Global (Bancos)")
+        has_default_routing_bancos = st.checkbox("Activar canal de ruteo por defecto", value=True, key="chk_def_bank")
         default_channel_bancos = None
         if has_default_routing_bancos:
             default_channel_bancos = st.selectbox("Canal por defecto:", ["GMONEY", "BATCH", "ALFIN"],
                                                   key="sel_def_bank")
 
         st.markdown("---")
-        st.subheader("Ruteo Específico (Solo Bancos)")
+        st.subheader("Ruteo Específico (Bancos)")
         banco_id = st.selectbox(
             "Seleccionar Banco:",
             options=list(bancos_principales.keys()),
@@ -84,9 +84,9 @@ with col1:
             st.session_state.custom_routing[banco_id] = canal_bank_spec
 
     # --- 1.2 SECCIÓN BILLETERAS ---
-    with st.expander("1.2 Configuración Billeteras", expanded=True):
-        st.subheader("Configuración Global Billeteras")
-        has_default_routing_billeteras = st.checkbox("Activar Billeteras por defecto", value=False, key="chk_def_wall")
+    with st.expander("1.2 Billeteras", expanded=True):
+        st.subheader("Ruteo Global (Billeteras)")
+        has_default_routing_billeteras = st.checkbox("Activar canal de ruteo por defecto", value=False, key="chk_def_wall")
         default_channel_billeteras = None
         if has_default_routing_billeteras:
             default_channel_billeteras = st.selectbox("Canal por defecto:", ["GMONEY"], key="sel_def_wall")
@@ -136,14 +136,14 @@ with col2:
     if activar_titularidad:
         # --- 2.1 TITULARIDAD GLOBAL ---
         with st.expander("2.1 Configuración Global de Titularidad", expanded=True):
-            has_default_tit = st.checkbox("Activar validador por defecto para todos", value=True)
+            has_default_tit = st.checkbox("Activar proveedor por defecto", value=True)
             default_tit_provider = None
             if has_default_tit:
                 default_tit_provider = st.selectbox("Proveedor por defecto:", ["GMONEY"])
 
         # --- 2.2 TITULARIDAD ESPECÍFICA ---
         with st.expander("2.2 Titularidad Específica", expanded=True):
-            tipo_tit = st.radio("Categoría de Institución:", ["Bancos", "Billeteras"], horizontal=True)
+            tipo_tit = st.radio("Categoría de PSP:", ["Bancos", "Billeteras"], horizontal=True)
 
             lista_tit = bancos_principales if tipo_tit == "Bancos" else billeteras_principales
 
@@ -153,8 +153,18 @@ with col2:
                 format_func=lambda x: lista_tit[x]
             )
 
-            opciones_validadores = ["BCP", "GMONEY"]
-            prov_tit = st.selectbox("Validador de Titularidad:", opciones_validadores)
+            # AJUSTE: Lógica dinámica y escalable para los validadores
+            opciones_validadores = ["GMONEY"]  # Validador base para todos
+
+            if tipo_tit == "Bancos":
+                if psp_tit_id == "psp_w13k323ed23dmd01":  # Excepción para BCP
+                    opciones_validadores.append("BCP")
+                # Si a futuro Interbank tiene validador propio, puedes agregar un elif aquí.
+
+            elif tipo_tit == "Billeteras":
+                pass  # Por ahora todas las billeteras solo tienen GMONEY. A futuro puedes agregar ifs aquí.
+
+            prov_tit = st.selectbox("Proveedor de Titularidad:", opciones_validadores)
 
             if st.button(f"Agregar Titularidad a {tipo_tit[:-1]}"):
                 st.session_state.custom_titularidad[psp_tit_id] = prov_tit
@@ -166,7 +176,7 @@ with col2:
 st.divider()
 
 # =====================================================================
-# TABLA RESUMEN (Con Encabezado Ajustado)
+# TABLA RESUMEN
 # =====================================================================
 st.header("📋 Resumen de Configuración")
 
@@ -255,8 +265,6 @@ def generar_json():
 
     if validate_interbranch: resultado["validate_interbranch"] = True
 
-    # El control only_yape_by_yape se simplificó, ya que ahora Yape es billetera
-    # y si está en billeteras por defecto, titularidad sigue su curso normal.
     only_yape_by_yape_local = (len(st.session_state.custom_routing) == 1 and
                                st.session_state.custom_routing.get("psp_w156838159753") == "YAPE" and
                                not (has_default_routing_bancos or has_default_routing_billeteras))
