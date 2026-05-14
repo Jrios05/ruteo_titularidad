@@ -27,7 +27,7 @@ def init_session_state():
 
 init_session_state()
 
-st.title("⚙️ Generador de JSON: Ruteo y Titularidad")
+st.title("⚙️ Ruteo y Titularidad")
 st.markdown("Configura los parámetros para generar el JSON de habilitación.")
 
 col1, col2 = st.columns(2)
