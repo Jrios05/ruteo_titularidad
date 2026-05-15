@@ -6,7 +6,7 @@ import pandas as pd
 st.set_page_config(page_title="Configurador de Ruteo y Titularidad", layout="wide")
 
 # =====================================================================
-# 1. REPOSITORIOS DE DATOS (Yape movido a Billeteras)
+# 1. REPOSITORIOS DE DATOS
 # =====================================================================
 
 bancos_principales = {
@@ -15,17 +15,16 @@ bancos_principales = {
     "psp_w0328223930dmd04": "(Interbank) - Banco International del Perú",
     "psp_w191433107454": "Banco de la Nación",
     "psp_w133203223m3md03": "(Scotiabank)- Scotiabank"
-    # Yape fue removido de aquí
 }
 
 billeteras_principales = {
+    "psp_w156838159753": "Yape",
     "psp_3e74133b10bb44e6bd81": "PLIN",
     "psp_c6bee88b7b7e49bab8d4": "BIM",
     "psp_258a4fc095414c3b9c44": "LIGO",
     "psp_3f7ac8c5a4c8433288bd": "DALE",
     "psp_12f35441df4e426991e9": "PREXPE",
-    "psp_28ed3cdabcbe49b098ee": "OH!",
-    "psp_w156838159753": "Yape"  # Yape ahora vive aquí
+    "psp_28ed3cdabcbe49b098ee": "OH!"
 }
 
 todos_los_psps_dict = {**bancos_principales, **billeteras_principales}
@@ -86,7 +85,8 @@ with col1:
     # --- 1.2 SECCIÓN BILLETERAS ---
     with st.expander("1.2 Billeteras", expanded=True):
         st.subheader("Ruteo Global (Billeteras)")
-        has_default_routing_billeteras = st.checkbox("Activar canal de ruteo por defecto", value=False, key="chk_def_wall")
+        has_default_routing_billeteras = st.checkbox("Activar canal de ruteo por defecto", value=False,
+                                                     key="chk_def_wall")
         default_channel_billeteras = None
         if has_default_routing_billeteras:
             default_channel_billeteras = st.selectbox("Canal por defecto:", ["GMONEY"], key="sel_def_wall")
@@ -100,7 +100,6 @@ with col1:
             key="sel_spec_wall"
         )
 
-        # AJUSTE: Yape ahora trae sus canales a la sección de Billeteras
         canales_billeteras = ["GMONEY"]
         if wallet_id == "psp_w156838159753":  # YAPE
             canales_billeteras.append("YAPE")
@@ -153,16 +152,14 @@ with col2:
                 format_func=lambda x: lista_tit[x]
             )
 
-            # AJUSTE: Lógica dinámica y escalable para los validadores
             opciones_validadores = ["GMONEY"]  # Validador base para todos
 
             if tipo_tit == "Bancos":
                 if psp_tit_id == "psp_w13k323ed23dmd01":  # Excepción para BCP
                     opciones_validadores.append("BCP")
-                # Si a futuro Interbank tiene validador propio, puedes agregar un elif aquí.
 
             elif tipo_tit == "Billeteras":
-                pass  # Por ahora todas las billeteras solo tienen GMONEY. A futuro puedes agregar ifs aquí.
+                pass
 
             prov_tit = st.selectbox("Proveedor de Titularidad:", opciones_validadores)
 
@@ -184,18 +181,34 @@ st.header("📋 Resumen de Configuración")
 def preparar_datos_tabla():
     filas = []
 
+    # --- Lógica de visualización para Bancos Default ---
     if has_default_routing_bancos:
-        filas.append({"Categoría": "Bank Transfer", "Banco/PSP": "POR DEFECTO", "Canal": default_channel_bancos,
-                      "Titularidad": default_tit_provider if activar_titularidad and has_default_tit else "N/A"})
+        tit_bancos_def = "N/A"
+        if activar_titularidad:
+            # Si el canal default es ALFIN, en la tabla forzamos a mostrar ALFIN como titularidad
+            tit_bancos_def = "ALFIN" if default_channel_bancos == "ALFIN" else (
+                default_tit_provider if has_default_tit else "N/A")
 
+        filas.append({"Categoría": "Bank Transfer", "Banco/PSP": "POR DEFECTO", "Canal": default_channel_bancos,
+                      "Titularidad": tit_bancos_def})
+
+    # --- Lógica de visualización para Billeteras Default ---
     if has_default_routing_billeteras:
         is_merged = has_default_routing_bancos and default_channel_bancos == default_channel_billeteras
         canal_val = f"{default_channel_billeteras}" if is_merged else default_channel_billeteras
-        filas.append({"Categoría": "Billeteras", "Banco/PSP": "POR DEFECTO", "Canal": canal_val,
-                      "Titularidad": default_tit_provider if activar_titularidad and has_default_tit else "N/A"})
 
+        tit_wall_def = "N/A"
+        if activar_titularidad:
+            tit_wall_def = "ALFIN" if default_channel_billeteras == "ALFIN" else (
+                default_tit_provider if has_default_tit else "N/A")
+
+        filas.append({"Categoría": "Billeteras", "Banco/PSP": "POR DEFECTO", "Canal": canal_val,
+                      "Titularidad": tit_wall_def})
+
+    # --- Lógica de visualización para Excepciones ---
     psps_con_override = set(
         list(st.session_state.custom_routing.keys()) + list(st.session_state.custom_titularidad.keys()))
+
     for psp in psps_con_override:
         cat = "Bank Transfer" if psp in bancos_principales else "Billeteras"
         nombre = todos_los_psps_dict.get(psp, psp)
@@ -208,7 +221,10 @@ def preparar_datos_tabla():
             ruteo = default_channel_billeteras if has_default_routing_billeteras else "N/A"
 
         if activar_titularidad:
-            if psp == "psp_w156838159753" and ruteo == "YAPE":
+            # AJUSTE: Muestra ALFIN visualmente si el ruteo de este PSP va por ALFIN
+            if ruteo == "ALFIN":
+                tit = "ALFIN"
+            elif psp == "psp_w156838159753" and ruteo == "YAPE":
                 tit = "YAPE"
             elif psp in st.session_state.custom_titularidad:
                 tit = st.session_state.custom_titularidad[psp]
@@ -221,6 +237,7 @@ def preparar_datos_tabla():
 
         filas.append({"Categoría": cat, "Banco/PSP": nombre, "Canal": ruteo, "Titularidad": tit})
 
+    # --- Lógica de Interplaza ---
     if validate_interbranch:
         val_int = default_tit_provider if (activar_titularidad and has_default_tit) else "N/A"
         filas.append({"Categoría": "Interplaza", "Banco/PSP": "Interplaza", "Canal": "BATCH", "Titularidad": val_int})
@@ -269,18 +286,27 @@ def generar_json():
                                st.session_state.custom_routing.get("psp_w156838159753") == "YAPE" and
                                not (has_default_routing_bancos or has_default_routing_billeteras))
 
+    # --- Lógica Titularidad ---
     if activar_titularidad and not only_yape_by_yape_local:
         provider = {}
         if has_default_tit: provider["DEFAULT"] = default_tit_provider
         for psp, prov in st.session_state.custom_titularidad.items():
             provider[psp] = prov
+
         resultado["account_holder"] = {
             "provider": provider, "validate": True, "audit_mode": False,
             "validate_cci": True, "validate_wallet": True, "validate_account": True
         }
 
-    if (has_default_routing_bancos and default_channel_bancos == "ALFIN") or any(
-            c == "ALFIN" for c in st.session_state.custom_routing.values()):
+    # --- AJUSTE: Lógica ALFIN condicionada a Titularidad ---
+    alfin_esta_ruteado = (
+            (has_default_routing_bancos and default_channel_bancos == "ALFIN") or
+            (has_default_routing_billeteras and default_channel_billeteras == "ALFIN") or
+            any(c == "ALFIN" for c in st.session_state.custom_routing.values())
+    )
+
+    # Solo inyecta el flag si ALFIN está en el ruteo Y la titularidad está activada
+    if alfin_esta_ruteado and activar_titularidad:
         resultado["alfin_v3_enabled"] = True
 
     return resultado
