@@ -177,11 +177,6 @@ st.divider()
 # =====================================================================
 st.header("📋 Resumen de Configuración")
 
-# =====================================================================
-# TABLA RESUMEN
-# =====================================================================
-st.header("📋 Resumen de Configuración")
-
 
 def preparar_datos_tabla():
     filas = []
@@ -190,6 +185,7 @@ def preparar_datos_tabla():
     if has_default_routing_bancos:
         tit_bancos_def = "N/A"
         if activar_titularidad:
+            # Si el canal default es ALFIN, en la tabla forzamos a mostrar ALFIN como titularidad
             tit_bancos_def = "ALFIN" if default_channel_bancos == "ALFIN" else (
                 default_tit_provider if has_default_tit else "N/A")
 
@@ -225,6 +221,7 @@ def preparar_datos_tabla():
             ruteo = default_channel_billeteras if has_default_routing_billeteras else "N/A"
 
         if activar_titularidad:
+            # AJUSTE: Muestra ALFIN visualmente si el ruteo de este PSP va por ALFIN
             if ruteo == "ALFIN":
                 tit = "ALFIN"
             elif psp == "psp_w156838159753" and ruteo == "YAPE":
@@ -248,25 +245,7 @@ def preparar_datos_tabla():
     return pd.DataFrame(filas)
 
 
-df_resumen = preparar_datos_tabla()
-
-if not df_resumen.empty:
-    # Mostramos la tabla visual estándar para que sea fácil de leer
-    st.dataframe(df_resumen, use_container_width=True, hide_index=True)
-
-
-    # Función manual para convertir la tabla a Markdown (Evita requerir librerías extra)
-    def convertir_a_markdown(df):
-        markdown = f"| {' | '.join(df.columns)} |\n"
-        markdown += f"|{'|'.join(['---'] * len(df.columns))}|\n"
-        for _, row in df.iterrows():
-            markdown += f"| {' | '.join(str(v) for v in row.values)} |\n"
-        return markdown
-
-
-    # Mostramos el bloque de código con el botón de copiar incorporado
-    st.caption("Para pegar esta tabla en tickets (Jira, Slack, Teams), usa el botón de copiar a continuación:")
-    st.code(convertir_a_markdown(df_resumen), language="markdown")
+st.dataframe(preparar_datos_tabla(), use_container_width=True, hide_index=True)
 
 st.divider()
 
