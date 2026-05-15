@@ -185,7 +185,6 @@ def preparar_datos_tabla():
     if has_default_routing_bancos:
         tit_bancos_def = "N/A"
         if activar_titularidad:
-            # Si el canal default es ALFIN, en la tabla forzamos a mostrar ALFIN como titularidad
             tit_bancos_def = "ALFIN" if default_channel_bancos == "ALFIN" else (
                 default_tit_provider if has_default_tit else "N/A")
 
@@ -221,7 +220,6 @@ def preparar_datos_tabla():
             ruteo = default_channel_billeteras if has_default_routing_billeteras else "N/A"
 
         if activar_titularidad:
-            # AJUSTE: Muestra ALFIN visualmente si el ruteo de este PSP va por ALFIN
             if ruteo == "ALFIN":
                 tit = "ALFIN"
             elif psp == "psp_w156838159753" and ruteo == "YAPE":
@@ -245,7 +243,26 @@ def preparar_datos_tabla():
     return pd.DataFrame(filas)
 
 
-st.dataframe(preparar_datos_tabla(), use_container_width=True, hide_index=True)
+df_resumen = preparar_datos_tabla()
+
+if not df_resumen.empty:
+    st.dataframe(df_resumen, use_container_width=True, hide_index=True)
+
+    # --- NUEVO: Botón de descarga CSV para la tabla ---
+    # Convertimos el DataFrame a CSV
+    csv = df_resumen.to_csv(index=False).encode('utf-8')
+
+    col_tab_1, col_tab_2 = st.columns([1, 3])
+    with col_tab_1:
+        st.download_button(
+            label="📥 Descargar Tabla en Excel (CSV)",
+            data=csv,
+            file_name='resumen_configuracion.csv',
+            mime='text/csv',
+        )
+    with col_tab_2:
+        st.caption(
+            "💡 Tip: También puedes hacer clic en la tabla y presionar `Ctrl+A` y `Ctrl+C` para copiarla directamente a tu correo o ticket.")
 
 st.divider()
 
