@@ -177,6 +177,11 @@ st.divider()
 # =====================================================================
 st.header("📋 Resumen de Configuración")
 
+# =====================================================================
+# TABLA RESUMEN
+# =====================================================================
+st.header("📋 Resumen de Configuración")
+
 
 def preparar_datos_tabla():
     filas = []
@@ -246,23 +251,22 @@ def preparar_datos_tabla():
 df_resumen = preparar_datos_tabla()
 
 if not df_resumen.empty:
+    # Mostramos la tabla visual estándar para que sea fácil de leer
     st.dataframe(df_resumen, use_container_width=True, hide_index=True)
 
-    # --- NUEVO: Botón de descarga CSV para la tabla ---
-    # Convertimos el DataFrame a CSV
-    csv = df_resumen.to_csv(index=False).encode('utf-8')
 
-    col_tab_1, col_tab_2 = st.columns([1, 3])
-    with col_tab_1:
-        st.download_button(
-            label="📥 Descargar Tabla en Excel (CSV)",
-            data=csv,
-            file_name='resumen_configuracion.csv',
-            mime='text/csv',
-        )
-    with col_tab_2:
-        st.caption(
-            "💡 Tip: También puedes hacer clic en la tabla y presionar `Ctrl+A` y `Ctrl+C` para copiarla directamente a tu correo o ticket.")
+    # Función manual para convertir la tabla a Markdown (Evita requerir librerías extra)
+    def convertir_a_markdown(df):
+        markdown = f"| {' | '.join(df.columns)} |\n"
+        markdown += f"|{'|'.join(['---'] * len(df.columns))}|\n"
+        for _, row in df.iterrows():
+            markdown += f"| {' | '.join(str(v) for v in row.values)} |\n"
+        return markdown
+
+
+    # Mostramos el bloque de código con el botón de copiar incorporado
+    st.caption("Para pegar esta tabla en tickets (Jira, Slack, Teams), usa el botón de copiar a continuación:")
+    st.code(convertir_a_markdown(df_resumen), language="markdown")
 
 st.divider()
 
